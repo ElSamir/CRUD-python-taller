@@ -1,0 +1,4 @@
+1,samir elias,sanchez,cedillo,8
+2,Christian,Horner,RB,7
+3,Pepe,Perez,Sanchez,1
+4,Anya,Taylor,Joy,1

@@ -1,0 +1,2 @@
+1,Faros,3
+2,llanta,8
