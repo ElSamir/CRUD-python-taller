@@ -30,24 +30,50 @@ def registrar_piezas():
 
 
 def registrar_reparacion():
+    # Obtener los datos de la reparación desde las entradas
     nueva_reparacion_id = entry_reparacion_id.get()
     nueva_fecha_entrada = entry_fecha_entrada.get()
     nueva_fecha_salida = entry_fecha_salida.get()
     nuevo_falla = entry_falla.get()
-    nuevo_cantidad_piezas = entry_cantidad_piezas.get()
+    nueva_cantidad_piezas = entry_cantidad_piezas.get()
     vehiculo_seleccionado = combo_vehiculo_id.get()
+    pieza_seleccionada = combo_pieza_id.get()  # Obtener la pieza seleccionada
 
     # Validar que el  ID no esté repetido
     if nueva_reparacion_id in reparaciones_registradas:
         messagebox.showerror("Error", "Vehiculo ID  o matricula ya existe")
     else:
+
+        # Validar que haya piezas disponibles y que no se utilicen 0
+        stock_pieza = obtener_stock_pieza(pieza_seleccionada)
+        if stock_pieza <= 0:
+            messagebox.showerror("Error", "No hay piezas disponibles.")
+            return
+        if int(nueva_cantidad_piezas) <= 0:
+            messagebox.showerror(
+                "Error", "La cantidad de piezas debe ser mayor que 0.")
+            return
+
+        # Restar la cantidad de piezas utilizadas al stock
+        nuevo_stock_pieza = stock_pieza - int(nueva_cantidad_piezas)
+
+        # Actualizar el stock en el archivo de piezas
+        with open("piezas.txt", "r") as file:
+            lines = file.readlines()
+
+        with open("piezas.txt", "w") as file:
+            for line in lines:
+                parts = line.strip().split(",")
+                if len(parts) >= 2 and parts[0] == pieza_seleccionada:
+                    line = f"{parts[0]},{parts[1]},{nuevo_stock_pieza}\n"
+                file.write(line)
+
+         # Guardar la información de la reparación en el archivo de reparaciones
         with open("reparaciones.txt", "a") as file:
             file.write(
-                f"{nueva_reparacion_id},{nueva_fecha_entrada},{nueva_fecha_salida},{nuevo_falla},{nuevo_cantidad_piezas},{vehiculo_seleccionado}\n")
+                f"{nueva_reparacion_id},{nueva_fecha_entrada},{nueva_fecha_salida},{nuevo_falla},{nueva_cantidad_piezas},{vehiculo_seleccionado}\n")
 
-        reparaciones_registradas.add(nueva_reparacion_id)
-
-        messagebox.showinfo("Éxito", "Reparacion registrada con éxito")
+        messagebox.showinfo("Éxito", "Reparación registrada exitosamente")
 
 
 def registrar_cliente():
@@ -591,7 +617,8 @@ def abrir_ventana_pieza():
 
 
 def abrir_ventana_reparacion():
-    global ventanaReparaciones, entry_buscar4, entry_reparacion_id, entry_fecha_entrada, entry_fecha_salida, entry_falla, entry_cantidad_piezas, combo_vehiculo_id
+    global ventanaReparaciones, entry_buscar4, entry_reparacion_id, entry_fecha_entrada, entry_fecha_salida, entry_falla, entry_cantidad_piezas, combo_vehiculo_id, combo_pieza_id
+
     ventanaReparaciones = tk.Toplevel()
     ventanaReparaciones.geometry("600x500")
     ventanaReparaciones.title("Registrar Reparacion")
@@ -616,9 +643,19 @@ def abrir_ventana_reparacion():
     entry_cantidad_piezas = tk.Entry(ventanaReparaciones)
     entry_cantidad_piezas.place(x=150, y=100)
 
-    # Obtener una lista de IDs de usuarios registrados
+    # Selector para elegir la ID de la pieza
+    tk.Label(ventanaReparaciones, text="Selecciona Pieza ID:").place(x=10, y=190)
+    combo_pieza_id = tk.StringVar()
+    combo_pieza_id.set("")  # Valor inicial en blanco
 
-    # Selector para elegir la ID del usuario registrado
+    # Obtener una lista de IDs de piezas registradas
+    piezas_disponibles = [
+        pieza for pieza in piezas_registradas if obtener_stock_pieza(pieza) > 0]
+
+    combo_pieza_id_menu = tk.OptionMenu(
+        ventanaReparaciones, combo_pieza_id, *piezas_disponibles)
+    combo_pieza_id_menu.place(x=200, y=190)
+
     tk.Label(ventanaReparaciones,
              text="Selecciona Vehiculo ID:").place(x=10, y=160)
     combo_vehiculo_id = tk.StringVar()
@@ -629,20 +666,32 @@ def abrir_ventana_reparacion():
 
     btn_registrar_reparacion = tk.Button(
         ventanaReparaciones, text="Registrar Reparacion", command=registrar_reparacion)
-    btn_registrar_reparacion.place(x=10, y=190)
+    btn_registrar_reparacion.place(x=10, y=210)
 
-    tk.Label(ventanaReparaciones, text="Buscar Vehículo por ID:").place(
-        x=10, y=220)
+    tk.Label(ventanaReparaciones, text="Buscar Reparacion por ID:").place(
+        x=10, y=250)
     entry_buscar4 = tk.Entry(ventanaReparaciones)
-    entry_buscar4.place(x=250, y=220)
+    entry_buscar4.place(x=250, y=250)
 
     btn_buscar = tk.Button(ventanaReparaciones, text="Buscar",
                            command=buscar_reparaciones)
-    btn_buscar.place(x=450, y=220)
+    btn_buscar.place(x=450, y=250)
 
     btn_guardar_cambios = tk.Button(ventanaReparaciones, text="Guardar Cambios",
                                     command=guardar_cambios_reparacion)
-    btn_guardar_cambios.place(x=100, y=250)
+    btn_guardar_cambios.place(x=100, y=300)
+
+
+def obtener_stock_pieza(id_pieza):
+    # Función para obtener el stock de una pieza por su ID
+    with open("piezas.txt", "r") as file:
+        for line in file:
+            parts = line.strip().split(",")
+            if len(parts) >= 2 and parts[0] == id_pieza:
+                # El stock se encuentra en la tercera posición
+                return int(parts[2])
+
+    return 0  # Si no se encuentra la pieza, se asume que el stock es 0
 
 
 def abrir_ventana_vehiculos():
